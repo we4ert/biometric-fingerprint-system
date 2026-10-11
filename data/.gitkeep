@@ -1,0 +1,49 @@
+from fingerprint_system import FingerprintDatabase, build_fingerprint_template, compare_fingerprints
+
+
+def test_build_fingerprint_template_works():
+    template = build_fingerprint_template("sample-fingerprint")
+    assert isinstance(template, list)
+    assert len(template) == 256
+    assert all(isinstance(x, int) for x in template)
+
+
+def test_compare_fingerprints_same_sample_returns_one():
+    template_a = build_fingerprint_template("same-fingerprint")
+    template_b = build_fingerprint_template("same-fingerprint")
+    score = compare_fingerprints(template_a, template_b)
+    assert score == 1.0
+
+
+def test_database_register_and_verify():
+    database = FingerprintDatabase("data/test_fingerprints.json")
+
+    if database.storage_path.exists():
+        database.storage_path.unlink()
+
+    record = database.register_user("user-01", "empreinte-01")
+    assert record.user_id == "user-01"
+
+    accepted, score = database.verify("user-01", "empreinte-01", threshold=0.90)
+    assert accepted is True
+    assert score == 1.0
+
+    accepted, _ = database.verify("user-01", "empreinte-02", threshold=0.90)
+    assert accepted is False
+
+    database.storage_path.unlink()
+
+
+def test_list_users_returns_sorted_list():
+    database = FingerprintDatabase("data/test_fingerprints.json")
+
+    if database.storage_path.exists():
+        database.storage_path.unlink()
+
+    database.register_user("b-user", "sample-b")
+    database.register_user("a-user", "sample-a")
+
+    users = database.list_users()
+    assert users == ["a-user", "b-user"]
+
+    database.storage_path.unlink()
